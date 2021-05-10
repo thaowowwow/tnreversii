@@ -8,7 +8,7 @@ let http = require('http');
 /* Assume that we are running on Heroku */
 
 let port = port.env.PORT;
-let director = __dirname + '/public';
+let directory = __dirname + '/public';
 
 /* If we aren't on Heroku, then we need to adjust our port and directory */
 
@@ -24,10 +24,10 @@ let file = new static.Server(directory);
 let app = http.createServer(
     function(request,response){
         request.addListener('end', 
-        function(){
-            file.serve(request,response);
+            function(){
+                file.serve(request,response);
 
-        }
+            }
         ).resume();
 
     }

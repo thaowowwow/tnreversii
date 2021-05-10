@@ -1,0 +1,24 @@
+{
+  "name": "tnreversii",
+  "version": "0.0.1",
+  "description": "This is a version of the Reversi game",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thaowowwow/tnreversii.git"
+  },
+  "author": "Thao Nguyen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thaowowwow/tnreversii/issues"
+  },
+  "homepage": "https://github.com/thaowowwow/tnreversii#readme",
+  "dependencies": {
+    "node-static": "^0.7.11",
+    "socket.io": "^4.0.2"
+  }
+}
