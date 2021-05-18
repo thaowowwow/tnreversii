@@ -13,12 +13,12 @@
         background-color: rgb(34, 86, 167);
       }
       .join_room_response {
-        background-color: rgb(34, 86, 167);
+        background-color: rgb(225, 225, 225);
         margin: 1px 1px 1px 10px;
       }
       .chat_message {
         font-size:125%;
-        background-color: rgb(34, 86, 167);
+        background-color: rgb(225, 225, 225);
         margin: 1px 1px 1px 10px;
       }
 
@@ -29,35 +29,34 @@
   </head>
   <body>
    
-   <div class="container-fluid">
-      <div class="row m-3 headerrow">
-        <div class="col text-center">
+  <div class="container-fluid">
+    <div class="row m-3 headerrow">
+      <div class="col text-center">
         <h3>Lobby</h3>
-        </div>
       </div>
+    </div>
 
-      <div class="row m-3 ">
-        <div class="col">
-
-          <div class="row align-items-center justify-content-center m-3">
-            <div class="col-8">
-              <div class="input-group">
+    <div class="row m-3 ">
+      <div class="col">
+        <div class="row align-items-center justify-content-center m-3">
+          <div class="col-8">
+            <div class="input-group">
               <input type="text" class="form-control text-nowrap" id="chatMessage" placeHolder="Enter your message here"
               aria-label="Enter your message to send to the chat room" />
               
               <button type="submit" class="btn btn-primary text-nowrap" id="chatButton" onclick="sendChatMessage()">Send</button>
-              </div>
             </div>
           </div>
+        </div>
     
 
         <h4>Messages</h4>
-        <div id="messages">
+        <div id="messages" >
 
         </div>
-        </div>
       </div>
-   </div>
+    </div>
+  </div>
 
 
    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
