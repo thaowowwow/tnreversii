@@ -25,7 +25,7 @@ socket.on('log',function(array) {
 });
 
 socket.on('join_room_response', (payload) =>{
-    if(( typeof payLoad == 'undefined') || (payload === null)){
+    if(( typeof payload == 'undefined') || (payload === null)){
         console.log('Server did not send a payload');
         return;
     }
@@ -51,7 +51,7 @@ function sendChatMessage(){
 
 
 socket.on('send_chat_message_response', (payload) => {
-    if(( typeof payLoad == 'undefined') || (payload === null)){
+    if(( typeof payload == 'undefined') || (payload === null)){
         console.log('Server did not send a payload');
         return;
     }
