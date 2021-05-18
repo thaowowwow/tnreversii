@@ -11,28 +11,20 @@
     <style>
       body {
         background-color: rgb(34, 86, 167);
-        
-
       }
-
       .btn {
           background-color: rgb(249, 161, 27);
-        }
-
-        .img-fluid {
-  max-width: 70%;
-  
-
-}
-
-    </style>   
+      }
+     .img-fluid {
+      max-width: 70%;
+      }
+    </style>  
+     
     <script>
       function goToLobby(){
-        let username = $('#nameInput').val();
+        let username = encodeURI($('#nameInput').val());
         window.location.href = "lobby.html?username="+username;
-
       }
-
     </script>
 
 
