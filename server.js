@@ -25,8 +25,10 @@ let app = http.createServer(
     request.addListener('end',
       function () {
         file.serve(request, response);
-      }).resume();
-  }).listen(port);
+      }
+      ).resume();
+  }
+  ).listen(port);
 
 console.log('The server is running');
 
@@ -125,7 +127,7 @@ io.on('connection', (socket) => {
                 room: room
             }
             /* Announce to everyone that is in the room, who else is in the room */
-            for (const member of sockets){
+            for (const member of sockets) {
               let room = players[member.id].room;
                 response = {
                     result: 'success',
@@ -223,9 +225,9 @@ io.on('connection', (socket) => {
     /* Check that the data coming from the client is good */
     if ((typeof payload == 'undefined') || (payload === null)) {
       response = {};
-      response.result = 'fail';
+      response.result = 'fail',
       response.message = 'client did not send a payload';
-      socket.emit('uninvite_response', response);
+      socket.emit('uninvited', response);
       serverLog('uninvite command failed', JSON.stringify(response));
       return;
     }
@@ -253,10 +255,10 @@ io.on('connection', (socket) => {
     if ((typeof username == 'undefined') || (username === null) || (username === "")) {
       response = {
         result: 'fail',
-        message: 'the user that was invited does not have a name registered'
+        message: 'the user that was uninvited does not have a name registered'
       }
-      socket.emit('invite_response', response);
-      serverLog('invite command failed', JSON.stringify(response));
+      socket.emit('uninvited', response);
+      serverLog('uninvite command failed', JSON.stringify(response));
       return;
     }
 
@@ -269,7 +271,7 @@ io.on('connection', (socket) => {
                 result: 'fail',
                 message: 'The user that was uninvited is no longer in the room'
             }
-            socket.emit('uninvite_response', response);
+            socket.emit('uninvited', response);
             serverLog('uninvite command failed', JSON.stringify(response));
             return;
         }
@@ -288,6 +290,78 @@ io.on('connection', (socket) => {
           socket.to(requested_user).emit('uninvited', response);
           serverLog('uninvite command succeeded', JSON.stringify(response));
         
+        }
+    });
+  });
+
+
+
+  socket.on('game_start', (payload) => {
+    serverLog('Server received a command', '\'game_start\'', JSON.stringify(payload));
+    /* Check that the data coming from the client is good */
+    if ((typeof payload == 'undefined') || (payload === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'client did not send a payload';
+      socket.emit('game_start_response', response);
+      serverLog('game_start command failed', JSON.stringify(response));
+      return;
+    }
+    let requested_user = payload.requested_user;
+    let room = players[socket.id].room;
+    let username = players[socket.id].username;
+    if ((typeof requested_user == 'undefined') || (requested_user === null) || (requested_user === "")) {
+      response = {
+        result: 'fail',
+        message: 'client did not request a valid user to engage in play'
+      }
+      socket.emit('game_start_response', response);
+      serverLog('game_start command failed', JSON.stringify(response));
+      return;
+    }
+    if ((typeof room == 'undefined') || (room === null) || (room === "")) {
+      response = {
+        result: 'fail',
+        message: 'the user that was engaged to play is not in a room'
+      }
+      socket.emit('game_start_response', response);
+      serverLog('game_start command failed', JSON.stringify(response));
+      return;
+    }
+    if ((typeof username == 'undefined') || (username === null) || (username === "")) {
+      response = {
+        result: 'fail',
+        message: 'the user that was engaged to play does not have a name registered'
+      }
+      socket.emit('game_start_response', response);
+      serverLog('game_start command failed', JSON.stringify(response));
+      return;
+    }
+
+
+    /* Make sure that the player to engage is present */
+    io.in(room).allSockets().then((sockets) => {
+      /* Engaged player isn't in the room */
+        if ((typeof sockets == 'undefined') || (sockets === null) || !sockets.has(requested_user)) {
+            response = {
+                result: 'fail',
+                message: 'The user that was engaged to play is no longer in the room'
+            }
+            socket.emit('game_start_response', response);
+            serverLog('game_start command failed', JSON.stringify(response));
+            return;
+        }
+      /* Engaged player is in the room */
+        else {
+          let game_id = Math.floor(1 + Math.random() * 0x100000).toString(16);
+          response = {
+            result: 'success',
+            game_id: game_id,
+            socket_id: requested_user
+          }
+          socket.emit('game_start_response', response);
+          socket.to(requested_user).emit('game_start_response', response);
+          serverLog('game_start command succeeded', JSON.stringify(response));
         }
     });
   });
