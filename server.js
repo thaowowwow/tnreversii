@@ -55,7 +55,6 @@ io.on('connection', (socket) => {
   serverLog('a page connected to the server: ' + socket.id);
 
 
-
   /* join_room command handler */
   /* expected payload:
       {
@@ -139,11 +138,13 @@ io.on('connection', (socket) => {
                 /* Tell everyone that a new user has joined the chat room */
                 io.of('/').to(room).emit('join_room_response', response);
                 serverLog('join_room succeeded', JSON.stringify(response));
+                if(room !== "Lobby") {
+                  send_game_update(socket, room, 'initial update');
+                }
             }
         }
     });
   });
-
 
   socket.on('invite', (payload) => {
     serverLog('Server received a command', '\'invite\'', JSON.stringify(payload));
@@ -295,7 +296,6 @@ io.on('connection', (socket) => {
   });
 
 
-
   socket.on('game_start', (payload) => {
     serverLog('Server received a command', '\'game_start\'', JSON.stringify(payload));
     /* Check that the data coming from the client is good */
@@ -365,7 +365,6 @@ io.on('connection', (socket) => {
         }
     });
   });
-
 
 
   socket.on('disconnect', () => {
@@ -455,6 +454,423 @@ io.on('connection', (socket) => {
     /* Tell everyone in the room what the message is */
     io.of('/').to(room).emit('send_chat_message_response', response);
     serverLog('send_chat_message command succeeded', JSON.stringify(response));
+  });
 
+
+  socket.on('play_token', (payload) => {
+    serverLog('Server received a command', '\'play_token\'', JSON.stringify(payload));
+    /* Check that the data coming from the client is good */
+    if ((typeof payload == 'undefined') || (payload === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'client did not send a payload';
+      socket.emit('play_token_response', response);
+      serverLog('play_token command failed', JSON.stringify(response));
+      return;
+    }
+    let player = players[socket.id];
+    if ((typeof player == 'undefined') || (player === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'play_token came from an unregistered player';
+      socket.emit('play_token_response', response);
+      serverLog('play_token command failed', JSON.stringify(response));
+      return;
+    }
+    let username = player.username;
+    if ((typeof username == 'undefined') || (username === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'play_token command did not come from a registered user name';
+      socket.emit('play_token_response', response);
+      serverLog('play_token command failed', JSON.stringify(response));
+      return;
+    }
+
+    let game_id = player.room;
+    if ((typeof game_id == 'undefined') || (game_id === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'There was no valid game associated with the play_token command';
+      socket.emit('play_token_response', response);
+      serverLog('play_token command failed', JSON.stringify(response));
+      return;
+    }
+
+    let row = payload.row;
+    if ((typeof row == 'undefined') || (row === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'There was no valid row associated with the play token command';
+      socket.emit('play_token_response', response);
+      serverLog('play_token command failed', JSON.stringify(response));
+      return;
+    }
+
+    let column = payload.column;
+    if ((typeof column == 'undefined') || (column === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'There was no valid column associated with the play token command';
+      socket.emit('play_token_response', response);
+      serverLog('play_token command failed', JSON.stringify(response));
+      return;
+    }
+
+    let color = payload.color;
+    if ((typeof color == 'undefined') || (color === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'There was no valid color associated with the play token command';
+      socket.emit('play_token_response', response);
+      serverLog('play_token command failed', JSON.stringify(response));
+      return;
+    }
+
+    let game = games[game_id];
+    if ((typeof game == 'undefined') || (game === null)) {
+      response = {};
+      response.result = 'fail';
+      response.message = 'There was no valid game associated with the play token command';
+      socket.emit('play_token_response', response);
+      serverLog('play_token command failed', JSON.stringify(response));
+      return;
+    }
+
+    /* Make sure the current attempt is by the correct color */
+    if (color !== game.whose_turn) {
+        let response = {
+            result: 'fail',
+            message: 'play_token played the wrong color. It\'s not their turn.'
+        }
+        socket.emit('play_token_response', response);
+        serverLog('play_token command failed', JSON.stringify(response));
+        return;
+    }
+
+     /* Make sure the current play is coming from the expected player*/
+     if (
+          ((game.whose_turn === 'white') && (game.player_white.socket != socket.id)) ||
+          ((game.whose_turn === 'black') && (game.player_black.socket != socket.id))
+      )  {
+          let response = {
+              result: 'fail',
+              message: 'play_token played the right color, but by the wrong player.'
+          }
+          socket.emit('play_token_response', response);
+          serverLog('play_token command failed', JSON.stringify(response));
+          return;
+      }
+
+
+
+    let response = {
+        result: 'success'
+    }
+    socket.emit('play_token_response', response);
+
+    /* Execute the move */
+    if (color === 'white') {
+        game.board[row][column] = 'w';
+        flip_tokens('w', row, column, game.board);
+        game.whose_turn = 'black';
+        game.legal_moves = calculate_legal_moves('b', game.board);
+    }
+    else if (color === 'black') {
+        game.board[row][column] = 'b';
+        flip_tokens('b', row, column, game.board);
+        game.whose_turn = 'white';
+        game.legal_moves = calculate_legal_moves('w', game.board);
+    }
+/* last move time reset */
+    let d = new Date();
+    game.last_move_time = d.getTime();
+
+    send_game_update(socket, game_id, 'played a token');
   });
 });
+
+/**********************/
+/* Code related to the game state */
+
+let games = [];
+
+function create_new_game() {
+    let new_game = {};
+    new_game.player_white = {};
+    new_game.player_white.socket = "";
+    new_game.player_white.username = "";
+    new_game.player_black = {};
+    new_game.player_black.socket = "";
+    new_game.player_black.username = "";
+
+    var d = new Date();
+    new_game.last_move_time = d.getTime();
+
+    new_game.whose_turn = 'black';
+
+    new_game.board = [
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', 'w', 'b', ' ', ' ', ' '],
+        [' ', ' ', ' ', 'b', 'w', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']
+    ];
+
+    new_game.legal_moves = calculate_legal_moves('b', new_game.board);
+
+    return new_game;
+}
+
+
+function check_line_match(color, dr, dc, r, c, board) {
+
+    if (board[r][c] === color) {
+        return true;
+    }
+    if (board[r][c] === ' ') {
+      return false;
+    }
+    /*Check to make sure we aren't going to walk off the board */
+    if ((r + dr < 0) || (r + dr > 7)) {
+        return false;
+    }
+    if ((c + dc < 0) || (c + dc > 7)) {
+        return false;
+    }
+    return (check_line_match(color, dr, dc, r + dr, c + dc, board));
+}
+
+/* Return true if r + dr supports playing at r and c + dc supports playing at c */
+function adjacent_support(who, dr, dc, r, c, board) {
+    let other;
+    if (who === 'b') {
+        other = 'w';
+    }
+    else if (who === 'w') {
+        other = 'b';
+    }
+    else {
+        log ("We have a problem:", +who);
+        return false;
+    }
+
+
+/* Check to make sure that the adjacent support in on the board */
+    if ((r + dr < 0) || ( r + dr > 7)) {
+        return false;
+    }
+    if ((c + dc < 0) || ( c + dc > 7)) {
+        return false;
+    }
+
+
+/* Check that the opposite color is present*/
+    if (board[r + dr][c + dc] !== other){
+    return false;
+    }
+
+/* Check to make sure that there is space for a matching color to capture token */
+    if (( r + dr + dr < 0) || ( r + dr +dr > 7)) {
+    return false;
+    }
+    if (( c + dc + dc < 0) || ( c + dc + dc > 7)) {
+    return false;
+    }
+
+    return check_line_match(who, dr, dc, r + dr + dr, c + dc + dc, board);
+}
+
+/* game board for legal moves*/
+function calculate_legal_moves(who, board) {
+    let legal_moves = [
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']
+    ]; 
+
+/* rules for legal moves*/
+    for (let row = 0; row < 8; row++) {
+        for (let column = 0; column < 8; column++) {
+            if (board[row][column] === ' ') {
+                nw = adjacent_support(who, -1, -1, row, column, board);
+                nn = adjacent_support(who, -1, 0, row, column, board);
+                ne = adjacent_support(who, -1, 1, row, column, board);
+
+                ww = adjacent_support(who, 0, -1, row, column, board);
+                ee = adjacent_support(who, 0, 1, row, column, board);
+
+                sw = adjacent_support(who, 1, -1, row, column, board);
+                ss = adjacent_support(who, 1, 0, row, column, board);
+                se = adjacent_support(who, 1, 1, row, column, board);
+                if (nw || nn || ne || ww || ee || sw || ss || se) {
+                    legal_moves[row][column] = who;
+                }
+            }
+        }
+    }
+    return legal_moves;
+}
+/* flip token function */
+  function flip_line(who, dr, dc, r, c, board) {
+
+    if ((r + dr < 0) || (r + dr > 7)) {
+        return false;
+    }
+    if ((c + dc < 0) || (c + dc > 7)) {
+        return false;
+    }
+    if (board[r + dr][c + dc] === ' ') {
+        return false;
+    }
+    if (board[r + dr][c + dc] === who) {
+      return true;
+    }
+    else {
+        if (flip_line(who, dr, dc, r + dr, c + dc, board)) {
+            board[r + dr][c + dc] = who;
+            return true;
+        }
+        else {
+            return false;
+        }
+  }
+}
+/* flip token function */
+function flip_tokens(who, row, column, board) {
+    flip_line(who, -1, -1, row, column, board);
+    flip_line(who, -1, 0, row, column, board);
+    flip_line(who, -1, 1, row, column, board);
+
+    flip_line(who, 0, -1, row, column, board);
+    flip_line(who, 0, 1, row, column, board);
+
+    flip_line(who, 1, -1, row, column, board);
+    flip_line(who, 1, 0, row, column, board);
+    flip_line(who, 1, 1, row, column, board);
+    
+}
+
+function send_game_update(socket, game_id, message) {
+
+  /* Check to see if the game with the game_id exists */
+  if((typeof games[game_id] == 'undefined') || (games[game_id] === null)) {
+    console.log("No game exists with the game_id:" + game_id + ". Making a new game for " + socket.id);
+    games[game_id] = create_new_game();
+  }
+
+  /* Make sure that only 2 people are in the room */
+  /* Assign this socket a color */
+  io.of('/').to(game_id).allSockets().then((sockets) => {
+
+    const iterator = sockets[Symbol.iterator]();
+    if (sockets.size >= 1) {
+        let first = iterator.next().value;
+        if((games[game_id].player_white.socket != first) &&
+           (games[game_id].player_black.socket != first)) {
+            /* Player does not have a color */
+            if(games[game_id].player_white.socket === "") {
+                /* This play should be white */
+                console.log("White is assigned to: " + first);
+                games[game_id].player_white.socket = first;
+                games[game_id].player_white.username = players[first].username;
+            }
+            else if(games[game_id].player_black.socket === "") {
+                /* This play should be black */
+                console.log("Black is assigned to: " + first);
+                games[game_id].player_black.socket = first;
+                games[game_id].player_black.username = players[first].username;
+            }
+            else {
+                /* This play should be kicked out */
+                console.log("Kicking " + first + "out of game; " + game_id);
+                io.in(first).socketsLeave([game_id]);
+            }
+          }
+    }
+    if (sockets.size >= 2) {
+        let second = iterator.next().value;
+        if((games[game_id].player_white.socket != second) &&
+           (games[game_id].player_black.socket != second)) {
+            /* Player does not have a color */
+            if(games[game_id].player_white.socket === "") {
+                /* This play should be white */
+                console.log("White is assigned to: " + second);
+                games[game_id].player_white.socket = second;
+                games[game_id].player_white.username = players[second].username;
+            }
+            else if(games[game_id].player_black.socket === "") {
+                /* This play should be black */
+                console.log("Black is assigned to: " + second);
+                games[game_id].player_black.socket = second;
+                games[game_id].player_black.username = players[second].username;
+            }
+            else {
+                /* This play should be kicked out */
+                console.log("Kicking " + second + "out of game; " + game_id);
+                io.in(second).socketsLeave([game_id]);
+            }
+      }
+  }
+  /* Send game update */
+  let payload = {
+      result: 'success',
+      game_id: game_id,
+      game: games[game_id],
+      message: message
+  }
+  io.of("/").to(game_id).emit('game_update', payload);
+});
+
+ /* Check if the game is over */
+ let legal_moves = 0;
+ let whitesum = 0;
+ let blacksum = 0;
+
+ for (let row = 0; row < 8; row++) {
+      for (let column = 0; column < 8; column++) {
+          if (games[game_id].legal_moves[row][column] !== ' ') {
+              legal_moves++;
+          }
+          if (games[game_id].board[row][column] !== 'w') {
+              whitesum++;
+          }
+          if (games[game_id].board[row][column] !== 'b') {
+              blacksum++;
+          }
+      }
+  }
+  if (legal_moves === 0) {
+      let winner = "Tie Game";
+      if (whitesum > blacksum) {
+          winner = "white"
+      }
+      if (whitesum < blacksum) {
+        winner = "black"
+    }
+
+    let payload = { 
+        result: 'success',
+        game_id: game_id,
+        game: games[game_id],
+        who_won: winner
+    }
+    io.in(game_id).emit('game_over', payload);
+
+    /* Delete old games after on hour */
+    setTimeout(
+      ((id) => {
+          return (() => {
+              delete games[id];
+          });
+      })(game_id),60 * 60 * 1000);
+  }
+}
