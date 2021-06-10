@@ -290,10 +290,10 @@ socket.on('game_update', (payload) => {
 
     /* change my token color */
     if (my_color === 'white') {
-        $("#my_color").html('<h3 id="my_color">I am white</h3>');
+        $("#my_color").html('<h3 id="my_color">I am orange</h3>');
     }
     else if (my_color === 'black') {
-        $("#my_color").html('<h3 id="my_color">I am black</h3>');
+        $("#my_color").html('<h3 id="my_color">I am blue</h3>');
     }
     else {
         $("#my_color").html('<h3 id="my_color">Error: I don\'t know what color I am</h3>');
@@ -301,10 +301,10 @@ socket.on('game_update', (payload) => {
 
 /* Whose turn */
     if (payload.game.whose_turn === 'white') {
-        $("#my_color").append('<h4>It is white\'s turn</h4>');
+        $("#my_color").append('<h4>It is orange\'s turn</h4>');
     }
     else if (payload.game.whose_turn === 'black') {
-        $("#my_color").append('<h4>It is black\'s turn</h4>');
+        $("#my_color").append('<h4>It is blue\'s turn</h4>');
     }
     else {
         $("#my_color").append('<h3 id="my_color">Error: Don\'t know what color I am</h3>');
@@ -406,7 +406,11 @@ socket.on('game_update', (payload) => {
             let seconds = Math.floor((elapsed_m % (60 * 1000)) / 1000);
             let total = minutes * 60 + seconds;
             if (total > 100) {
-                total = 100;
+                total = 100; /* cap progress bar to 100 */
+            }
+            if (total < 0) {
+                total = 0;
+                last_time = d.getTime();
             }
             $("#elapsed").css("width", total + "%").attr("aria-valuenow", total);
             let timestring = "" + seconds;

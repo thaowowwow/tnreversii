@@ -10,6 +10,9 @@
 
     <link rel="stylesheet" href="assets/css/game.css" />
 
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+
     <title>Reversi</title>
   </head>
   <body>
@@ -31,9 +34,9 @@
       <div class="col-md-8 text-center justify-content-center">
         <h3 id="my_color">My Color</h3><br/>
         <img class="img-fluid" src="assets/images/white.gif" alt="White Score" />
-        <span id="whitesum">White Sum</span>
+        <span id="whitesum">Orange Sum</span>
         <span id="vs">vs</span>
-        <span id="blacksum">Black Sum</span>
+        <span id="blacksum">Blue Sum</span>
         <img class="img-fluid" src="assets/images/black.gif" alt="Black Score" />  
         </div>
         <div class="col-md-4 text-end justify-content-end">
@@ -45,10 +48,10 @@
       <div class="col">
         <div class="row align-items-start justify-content-center">
           <div class="col-md-8 table-responsive">
-            <div class="progress">
+            <div class="progress" >
               <div id="elapsed" 
               class="progress-bar progress-bar-animated progress-bar-striped bg-success" 
-              role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" class="mx-auto w-auto">
             </div>
             </div>
               <table id="game_board" class="mx-auto w-auto">
@@ -145,7 +148,7 @@
               placeHolder="Enter your message here"
               aria-label="Enter your message to send to the chat room"/>
               
-              <button type="submit" class="btn btn-primary text-nowrap" id="chatButton" 
+              <button type="submit" class="btn btn-primary text-nowrap " id="chatButton" 
               onclick="sendChatMessage()">Send</button>
             </div>
             <div id="messages">

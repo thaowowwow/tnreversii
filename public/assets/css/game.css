@@ -10,6 +10,7 @@ body {
 
 #messagePane {
   background-color: rgb(212, 236, 254);
+  font-family: 'Open Sans', sans-serif;
 }
 
 .join_room_response,
@@ -42,3 +43,4 @@ table#game_board td {
 td.hovered_over:hover {
     background-image: url('/assets/images/hover.gif');
 }
+
